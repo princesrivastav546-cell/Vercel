@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: oliver-exploits-bot
+    env: python
+    region: oregon  # Choose your preferred region
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
+    envVars:
+      - key: BOT_TOKEN
+        sync: false # You will set this value manually in the Render Dashboard
