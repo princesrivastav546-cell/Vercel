@@ -1,4 +1,6 @@
 import os
+import asyncio
+import multiprocessing
 import requests
 import json
 import logging
@@ -6,6 +8,10 @@ import time
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from colorama import init, Fore, Style
+
+# Initialize colorama for colored terminal output
+init(autoreset=True)
 
 # ==================== CONFIGURATION ====================
 API_BASE = "https://anishexploits.site/api/api.php?key=exploits&num="
@@ -272,10 +278,11 @@ def format_cybersecurity_report(user_data, number, record_count, current_time):
     
     return report
 
-# ==================== KEEP ALIVE WEB SERVER ====================
-def run_simple_server():
+# ==================== SIMPLE WEB SERVER ====================
+def run_web_server():
     """Simple HTTP server to keep Render service alive"""
     from http.server import HTTPServer, BaseHTTPRequestHandler
+    import socket
     
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -288,42 +295,59 @@ def run_simple_server():
             # Suppress default logging
             pass
     
-    server = HTTPServer(('0.0.0.0', PORT), Handler)
-    print(f"✅ Web server started on port {PORT}")
-    server.serve_forever()
-
-# ==================== MAIN FUNCTION ====================
-def main():
-    """Main function to start the bot"""
-    print("\n" * 2)
-    print("=" * 50)
-    print("🛡️ OLIVER EXPLOITS NUMBER SCANNER")
-    print("📱 Status: STARTING...")
-    print("=" * 50)
-    
     try:
+        server = HTTPServer(('0.0.0.0', PORT), Handler)
+        print(f"{Fore.GREEN}✅ Web server started on port {PORT}{Style.RESET_ALL}")
+        server.serve_forever()
+    except socket.error as e:
+        print(f"{Fore.RED}❌ Web server error: {e}{Style.RESET_ALL}")
+
+# ==================== ASYNC BOT RUNNER ====================
+async def run_bot_async():
+    """Run the Telegram bot asynchronously"""
+    try:
+        print(f"{Fore.CYAN}\n" + "=" * 50 + Style.RESET_ALL)
+        print(f"{Fore.YELLOW}🛡️ OLIVER EXPLOITS NUMBER SCANNER{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}📱 Status: INITIALIZING...{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}" + "=" * 50 + Style.RESET_ALL)
+        
         application = Application.builder().token(BOT_TOKEN).build()
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
-        print("\n✅ Bot initialized successfully!")
-        print("🔍 Waiting for scan requests...\n")
+        print(f"{Fore.GREEN}\n✅ Bot initialized successfully!{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}🔍 Waiting for scan requests...{Style.RESET_ALL}\n")
         
         # Start the bot polling
-        application.run_polling(drop_pending_updates=True)
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
         
+        print(f"{Fore.GREEN}🚀 Bot is now running and ready!{Style.RESET_ALL}")
+        
+        # Keep the bot running
+        while True:
+            await asyncio.sleep(1)
+            
     except Exception as e:
-        logging.error(f"Bot startup failed: {str(e)}")
-        print(f"❌ Error: {str(e)}")
+        print(f"{Fore.RED}❌ Bot startup failed: {str(e)}{Style.RESET_ALL}")
+        logging.error(f"Bot error: {str(e)}")
 
-# ==================== APPLICATION STARTUP ====================
-if __name__ == "__main__":
-    import multiprocessing
+# ==================== MAIN ENTRY POINT ====================
+def main():
+    """Main entry point with colored output"""
+    print(f"{Fore.CYAN}🚀 Starting Oliver Exploits Bot...{Style.RESET_ALL}")
     
     # Start web server in a separate process
-    web_process = multiprocessing.Process(target=run_simple_server)
+    web_process = multiprocessing.Process(target=run_web_server)
     web_process.daemon = True
     web_process.start()
     
-    # Start the bot in the main process
+    print(f"{Fore.GREEN}✅ Web server process started{Style.RESET_ALL}")
+    
+    # Run the bot in the main process
+    asyncio.run(run_bot_async())
+
+# ==================== APPLICATION STARTUP ====================
+if __name__ == "__main__":
     main()
