@@ -6,7 +6,6 @@ import time
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from flask import Flask
 
 # ==================== CONFIGURATION ====================
 API_BASE = "https://anishexploits.site/api/api.php?key=exploits&num="
@@ -26,9 +25,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-
-# Initialize Flask app
-web_app = Flask(__name__)
 
 # ==================== WELCOME MESSAGE ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -276,39 +272,58 @@ def format_cybersecurity_report(user_data, number, record_count, current_time):
     
     return report
 
-# ==================== WEB SERVER ROUTE ====================
-@web_app.route('/')
-def home():
-    return "Bot is running. Powered by Render."
+# ==================== KEEP ALIVE WEB SERVER ====================
+def run_simple_server():
+    """Simple HTTP server to keep Render service alive"""
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(b"Bot is running. Powered by Render.")
+        
+        def log_message(self, format, *args):
+            # Suppress default logging
+            pass
+    
+    server = HTTPServer(('0.0.0.0', PORT), Handler)
+    print(f"✅ Web server started on port {PORT}")
+    server.serve_forever()
 
 # ==================== MAIN FUNCTION ====================
-def start_bot():
-    """Function to start the Telegram bot in a separate thread"""
+def main():
+    """Main function to start the bot"""
+    print("\n" * 2)
+    print("=" * 50)
+    print("🛡️ OLIVER EXPLOITS NUMBER SCANNER")
+    print("📱 Status: STARTING...")
+    print("=" * 50)
+    
     try:
         application = Application.builder().token(BOT_TOKEN).build()
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
-        print("\n" * 2)
-        print("=" * 50)
-        print("🛡️ OLIVER EXPLOITS NUMBER SCANNER")
-        print("📱 Status: OPERATIONAL")
-        print("=" * 50)
         print("\n✅ Bot initialized successfully!")
         print("🔍 Waiting for scan requests...\n")
         
-        # Start polling
+        # Start the bot polling
         application.run_polling(drop_pending_updates=True)
+        
     except Exception as e:
         logging.error(f"Bot startup failed: {str(e)}")
+        print(f"❌ Error: {str(e)}")
 
 # ==================== APPLICATION STARTUP ====================
 if __name__ == "__main__":
-    import threading
+    import multiprocessing
     
-    # Start the bot in a separate thread
-    bot_thread = threading.Thread(target=start_bot, daemon=True)
-    bot_thread.start()
+    # Start web server in a separate process
+    web_process = multiprocessing.Process(target=run_simple_server)
+    web_process.daemon = True
+    web_process.start()
     
-    # Start Flask web server in main thread
-    web_app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
+    # Start the bot in the main process
+    main()
